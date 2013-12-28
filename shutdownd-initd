@@ -1,0 +1,20 @@
+#!/sbin/runscript
+# Distributed under the terms of the GNU General Public License v2
+
+depend() {
+	if [ -n "${IPRANGE}" ]; then
+		need net
+	fi
+}
+
+start() {
+	start-stop-daemon --start --background --make-pidfile --pidfile "/var/run/shutdownd.pid" --exec /usr/bin/shutdownd -- /etc/conf.d/shutdownd
+	ebegin "Starting shutdownd"
+	eend $? "Failed to start shutdownd"
+}
+
+stop() {
+	start-stop-daemon --stop --pidfile "/var/run/shutdownd.pid" -- ${FILE}
+	ebegin "shutdownd stopped"
+	eend $? "Failed to stop shutdownd"
+}

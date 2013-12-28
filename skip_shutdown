@@ -1,0 +1,11 @@
+#!/bin/sh
+source /etc/conf.d/shutdownd
+
+if [ -n "${SKIP_FILE}" ]; then
+	date -d "$1" +%s > "${SKIP_FILE}"
+	if [ ${UID} -eq 0 ]; then
+		chmod 666 "${SKIP_FILE}"
+	fi
+else
+	echo "Please specify the variable SKIP_FILE in /etc/conf.d/shutdownd to use this feature."
+fi

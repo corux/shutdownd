@@ -1,0 +1,97 @@
+#!/bin/bash
+source /etc/conf.d/shutdownd
+
+HELP="Commands for $(basename $0):
+unix-timestamp	Sets shutdown according to timestamp
++min/-min	Adds time in minutes to current shutdown-time
+time		Sets shutdown using date"
+
+INFO=1
+SPEAK=1
+ACTION=
+TIME=$(cat "${FILE}")
+if [ -z "$TIME" ]; then
+	TIME=0
+fi
+
+for opt in "$@"
+do
+	if [ "${opt/=}" != "${opt}" ]; then
+		opt=${opt/=*}
+		v=${opt/*=}
+	fi
+	case $opt in
+		--speak)	SPEAK=1;;
+		--no-speak)	SPEAK=0;;
+		--quiet)	INFO=0;;
+		--help)		echo "${HELP}"
+				exit 0;;
+		--*)		echo "unrecognized parameter '$opt'";;
+		*)		ACTION=$opt;;
+	esac
+done
+
+if [ "${ACTION:0:1}" == "+" ] || [ "${ACTION:0:1}" == "-" ]; then
+	if [ $TIME -lt $(date +%s) ]; then
+		TIME=$(date +%s)
+	fi
+	min=${ACTION:1}
+	if [ "${ACTION:0:1}" == "+" ]; then
+		TIME=$[$TIME+$min*60]
+	else
+		TIME=$[$TIME-$min*60]
+	fi
+elif [ "${ACTION}" == "now" ]; then
+	TIME=$(date +%s)
+elif [ "${ACTION}" == "stop" ]; then
+	TIME=0
+elif date --date="${ACTION}"&>/dev/null && [ $? -eq 0 ] && [ $(date +%s --date="${ACTION}") -ge $(date +%s) ]; then
+	TIME=$(date +%s --date="${ACTION}")
+elif [ -n "$(echo ${ACTION}|grep -o [0-9]*)" ] && [ $(echo ${ACTION}|grep -o [0-9]*) -ge $(date +%s) ]; then
+	TIME=$(echo ${ACTION}|grep -o [0-9]*)
+elif [ -n "$ACTION" ]; then
+	echo "Error: no valid shutdown time specified"
+	exit 1
+fi
+
+if [ -n "$TIME" ]; then
+	echo $TIME > $FILE
+	chmod 666 $FILE --quiet
+fi
+
+###########################
+# Format output
+###########################
+
+if [ $INFO -ne 0 ]; then
+	SECONDS=$[$TIME-$(date +%s)]
+	MINUTES=$[$SECONDS/60]
+	HOURS=$[$MINUTES/60]
+	SECONDS_LEFT=$[$SECONDS-$MINUTES*60]
+	if [ $SECONDS_LEFT -gt 30 ]; then
+		MINUTES=$[$MINUTES+1]
+	fi
+	if [ $SECONDS -lt -10 ]; then
+		INFO="shutdown disabled"
+	elif [ $SECONDS -ge -10 ] && [ $SECONDS -le 0 ]; then
+		INFO="shutdown now"
+	else
+		INFO="shutdown in "
+		if [ $SECONDS -lt 60 ]; then
+			INFO="$INFO $SECONDS seconds"
+		elif [ $MINUTES -lt 60 ]; then
+			INFO="$INFO $MINUTES minutes"
+		elif [ $HOURS -ge 5 ]; then
+			if [ $MINUTES -gt 30 ]; then
+				HOURS=$[$HOURS+1];
+			fi
+			INFO="$INFO $HOURS hours"
+		else
+			INFO="$INFO $HOURS hours and $[$MINUTES%60] minutes"
+		fi
+	fi
+fi
+echo $INFO
+if [ $SPEAK -eq 1 ]; then
+	echo $INFO | speak &
+fi

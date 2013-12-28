@@ -1,0 +1,28 @@
+# File to save the log to.
+# If empty syslog is used.
+LOGFILE="/var/log/shutdownd.log"
+
+# File used to specify a unix timestamp until then no shutdown is performed
+SKIP_FILE="/tmp/skip_shutdown"
+
+# File where the temporary shutdowntime is saved
+# uncomment to disable
+#FILE="/tmp/autoshutdown"
+
+# which ip-range should be scanned (see man nmap)
+# uncomment to disable
+#IPRANGE=192.168.10.100-149
+
+# when no computers are online in IPRANGE, wait NET_IDLE seconds until shutdown
+# see $IPRANGE
+#NET_IDLE=$[15*60]
+
+# when no users are logged in, wait USER_IDLE seconds until shutdown
+# uncomment to disable
+#USER_IDLE=$[20*60]
+
+# default sleep time between checks in seconds
+SLEEP=$[5*60]
+
+# command executed for shutdown
+SHUTDOWN_CMD="shutdown -h now"

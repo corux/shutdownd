@@ -1,0 +1,116 @@
+#!/bin/sh
+configfile=$1
+if [ -z "$configfile" ]; then
+	configfile=/etc/shutdownd.conf
+fi
+if [ -f "$configfile" ]; then
+	source $configfile
+else
+	echo "This script expects a config file as parameter"
+	exit 1
+fi
+
+if [ -z "$FILE" ] && [ -z "$IPRANGE" ] && [ -z "$USER_IDLE" ]; then
+	exit 1
+fi
+
+if [ -n "$FILE" ]; then
+	touch $FILE
+	chmod 666 $FILE --quiet
+fi
+
+if [ -z "$SHUTDOWN_CMD" ]; then
+	SHUTDOWN_CMD="shutdown -h now"
+fi
+
+function do_shutdown {
+	if ! [ -f "$SKIP_FILE" ] || [ `date +%s` -gt `cat "$SKIP_FILE"` ]; then
+		${SHUTDOWN_CMD}
+	fi
+}
+
+NET_TIME=0
+
+USER_TIME=0
+
+while :
+do
+	DSLEEP=$SLEEP
+
+	NOW=$(date +%s)
+
+	## shutdown based on online computers in ${IPRANGE} network
+
+	if [ -n "${IPRANGE}" ]; then
+		NET_ON_PCS_tmp=`nmap -sP ${IPRANGE} | grep " up " -B 1 | grep scan | awk '{print $5}' | awk -F '.' '{print $1}' | sort`
+		NET_ON=`echo "${NET_ON_PCS_tmp}" | wc -w`
+		if [ "${NET_ON_PCS}" != "${NET_ON_PCS_tmp}" ]; then
+			log_tmp="${NET_ON} PCs online: `echo ${NET_ON_PCS_tmp} | awk '{printf "%s",$0}'`"
+			if [ -n "$LOGFILE" ]; then
+				echo "[`date -R`] ${log_tmp}" >> "$LOGFILE"
+			else
+				logger "${log_tmp}"
+			fi
+		fi
+		NET_ON_PCS=${NET_ON_PCS_tmp}
+
+		if [ ${NET_ON} -ne 0 ]; then
+			NET_TIME=0
+		elif [ ${NET_ON} -eq 0 ] && [ ${NET_TIME} -eq 0 ]; then
+			NET_TIME=$(date +%s)
+		fi
+		if [ ${NET_ON} -eq 0 ] && [ $[$NOW-$NET_TIME] -ge $NET_IDLE ]; then
+			do_shutdown
+			NET_TIME=0
+		fi
+		TSLEEP=$[$NET_IDLE-$NOW+$NET_TIME]
+		if [ $TSLEEP -lt $SLEEP ] && [ $TSLEEP -gt 0 ]; then
+			DSLEEP=$TSLEEP
+		fi
+	fi
+
+	## shutdown based on logged in users
+
+	if [ -n "${USER_IDLE}" ]; then
+		USERS=$(users | wc -w)
+		if ! [ ${USERS} -eq 0 ]; then
+			USER_TIME=0
+		elif [ ${USERS} -eq 0 ] && [ ${USER_TIME} -eq 0 ]; then
+			USER_TIME=$(date +%s)
+		fi
+		if [ ${USERS} -eq 0 ] && [ $[$NOW-$USER_TIME] -ge $USER_IDLE ]; then
+			do_shutdown
+			USER_TIME=0
+		fi
+		TSLEEP=$[$USER_IDLE-$NOW+$USER_TIME]
+		if [ $TSLEEP -lt $SLEEP ] && [ $TSLEEP -gt 0 ]; then
+			DSLEEP=$TSLEEP
+		fi
+	fi
+
+	## shutdown based on time specified in ${FILE}
+
+	if [ -n "${FILE}" ]; then
+		SHUTDOWN=$(cat $FILE)
+		if [ -z "$SHUTDOWN" ]; then
+			SHUTDOWN=0
+		fi
+		OFFSET=$[$NOW-$SHUTDOWN]
+
+		if [ $OFFSET -le 10 ] && [ $OFFSET -ge 0 ]; then
+			do_shutdown
+		fi
+		TSLEEP=10
+		CHECK_FILE=$FILE
+		if [ $TSLEEP -lt $SLEEP ] && [ $TSLEEP -gt 0 ]; then
+			DSLEEP=$TSLEEP
+		fi
+	fi
+
+	## sleep
+	if [ -n "$CHECK_FILE" ] && [ -f "$CHECK_FILE" ]; then
+		inotifywait --quiet --event modify "${CHECK_FILE}" --timeout $DSLEEP
+	else
+		sleep $DSLEEP
+	fi
+done
