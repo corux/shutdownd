@@ -1,5 +1,5 @@
 #!/bin/bash
-source /etc/conf.d/shutdownd
+source /etc/shutdownd.conf
 
 HELP="Commands for $(basename $0):
 unix-timestamp	Sets shutdown according to timestamp

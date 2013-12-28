@@ -1,5 +1,5 @@
 #!/bin/sh
-source /etc/conf.d/shutdownd
+source /etc/shutdownd.conf
 
 if [ -n "${SKIP_FILE}" ]; then
 	date -d "$1" +%s > "${SKIP_FILE}"
@@ -7,5 +7,5 @@ if [ -n "${SKIP_FILE}" ]; then
 		chmod 666 "${SKIP_FILE}"
 	fi
 else
-	echo "Please specify the variable SKIP_FILE in /etc/conf.d/shutdownd to use this feature."
+	echo "Please specify the variable SKIP_FILE in /etc/shutdownd.conf to use this feature."
 fi
