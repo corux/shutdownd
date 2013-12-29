@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 configfile=$1
 if [ -z "$configfile" ]; then
 	configfile=/etc/shutdownd.conf
@@ -45,7 +45,7 @@ do
 		NET_ON_PCS_tmp=`nmap -sP ${IPRANGE} | grep " up " -B 1 | grep scan | awk '{print $5}' | awk -F '.' '{print $1}' | sort`
 		NET_ON=`echo "${NET_ON_PCS_tmp}" | wc -w`
 		if [ "${NET_ON_PCS}" != "${NET_ON_PCS_tmp}" ]; then
-			log_tmp="${NET_ON} PCs online: `echo ${NET_ON_PCS_tmp} | awk '{printf "%s",$0}'`"
+			log_tmp="${NET_ON} devices online: `echo ${NET_ON_PCS_tmp} | awk '{printf "%s",$0}'`"
 			if [ -n "$LOGFILE" ]; then
 				echo "[`date -R`] ${log_tmp}" >> "$LOGFILE"
 			else
