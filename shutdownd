@@ -23,7 +23,7 @@ if [ -z "$SHUTDOWN_CMD" ]; then
 	SHUTDOWN_CMD="shutdown -h now"
 fi
 
-function do_shutdown {
+do_shutdown() {
 	if ! [ -f "$SKIP_FILE" ] || [ `date +%s` -gt `cat "$SKIP_FILE"` ]; then
 		${SHUTDOWN_CMD}
 	fi
