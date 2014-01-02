@@ -56,6 +56,20 @@ do
 		fi
 		NET_ON_PCS=${NET_ON_PCS_tmp}
 
+		# Ignore libvirt VMs
+		if [ "${IGNORE_VM}" == "true" ]; then
+			if [ -x `which virsh` ]; then
+				VMs=`virsh list |grep running|awk '{print $2}'`
+				for pc in `echo $NET_ON_PCS_tmp|awk '{printf "%s ",$0}'`
+				do
+					pc=`echo $pc|awk -F. '{print $1}'`
+					if [ -n "$pc" -a -n "`echo $VMs|grep -o "$pc"`" ]; then
+						NET_ON=$[$NET_ON-1]
+					fi
+				done
+			fi
+		fi
+
 		if [ ${NET_ON} -ne 0 ]; then
 			NET_TIME=0
 		elif [ ${NET_ON} -eq 0 ] && [ ${NET_TIME} -eq 0 ]; then
