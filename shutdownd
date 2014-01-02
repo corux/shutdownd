@@ -44,8 +44,10 @@ do
 	if [ -n "${IPRANGE}" ]; then
 		NET_ON_PCS_tmp=`nmap -sP ${IPRANGE} | grep " up " -B 1 | grep scan | awk '{print $5}' | sort`
 		NET_ON=`echo "${NET_ON_PCS_tmp}" | wc -w`
-		NET_ON_PCS_tmp=${NET_ON_PCS_tmp//.`hostname -d`/}
-		#NET_ON_PCS_tmp=`echo ${NET_ON_PCS_tmp}|awk -F. '{print $1}'`
+		DOMAIN=`hostname -d`
+		if [ -n "$DOMAIN" ]; then
+			NET_ON_PCS_tmp=${NET_ON_PCS_tmp//$DOMAIN/}
+		fi
 		if [ "${NET_ON_PCS}" != "${NET_ON_PCS_tmp}" ]; then
 			log_tmp="${NET_ON} devices online: `echo ${NET_ON_PCS_tmp} | awk '{printf "%s",$0}'`"
 			if [ -n "$LOGFILE" ]; then
@@ -58,7 +60,8 @@ do
 
 		# Ignore libvirt VMs
 		if [ "${IGNORE_VM}" == "true" ]; then
-			if [ -x `which virsh` ]; then
+			VIRSH_CMD=`which virsh 2> /dev/null`
+			if [ -n "$VIRSH_CMD" -a -x "$VIRSH_CMD" ]; then
 				VMs=`virsh list |grep running|awk '{print $2}'`
 				for pc in `echo $NET_ON_PCS_tmp|awk '{printf "%s ",$0}'`
 				do
