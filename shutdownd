@@ -42,8 +42,10 @@ do
 	## shutdown based on online computers in ${IPRANGE} network
 
 	if [ -n "${IPRANGE}" ]; then
-		NET_ON_PCS_tmp=`nmap -sP ${IPRANGE} | grep " up " -B 1 | grep scan | awk '{print $5}' | awk -F '.' '{print $1}' | sort`
+		NET_ON_PCS_tmp=`nmap -sP ${IPRANGE} | grep " up " -B 1 | grep scan | awk '{print $5}' | sort`
 		NET_ON=`echo "${NET_ON_PCS_tmp}" | wc -w`
+		NET_ON_PCS_tmp=${NET_ON_PCS_tmp//.`hostname -d`/}
+		#NET_ON_PCS_tmp=`echo ${NET_ON_PCS_tmp}|awk -F. '{print $1}'`
 		if [ "${NET_ON_PCS}" != "${NET_ON_PCS_tmp}" ]; then
 			log_tmp="${NET_ON} devices online: `echo ${NET_ON_PCS_tmp} | awk '{printf "%s",$0}'`"
 			if [ -n "$LOGFILE" ]; then
