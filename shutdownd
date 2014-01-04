@@ -23,9 +23,33 @@ if [ -z "$SHUTDOWN_CMD" ]; then
 	SHUTDOWN_CMD="shutdown -h now"
 fi
 
+last_skip_log_time=0
 do_shutdown() {
-	if ! [ -f "$SKIP_FILE" ] || [ `date +%s` -gt `cat "$SKIP_FILE"` ]; then
-		${SHUTDOWN_CMD}
+	local flag=1
+	if [ -f "$SKIP_FILE" ]; then
+		local skip=`cat "$SKIP_FILE"`
+		if [ -n "$skip" -a `date +%s` -lt $skip ]; then
+			flag=0
+			if [ "$last_skip_log_time" -ne "$skip" ]; then
+				last_skip_log_time=$skip
+				local log_tmp="skip shutdown until `date --rfc-3339=seconds -d @${skip}`"
+				if [ -n "$LOGFILE" ]; then
+					echo "[`date -R`] ${log_tmp}" >> "$LOGFILE"
+				else
+					logger "${log_tmp}"
+				fi
+			fi
+		fi
+	fi
+
+	if [ $flag -eq 1 ]; then
+		local log_tmp="performing shutdown (${SHUTDOWN_CMD})"
+		if [ -n "$LOGFILE" ]; then
+			echo "[`date -R`] ${log_tmp}" >> "$LOGFILE"
+		else
+			logger "${log_tmp}"
+		fi
+		eval "${SHUTDOWN_CMD}"
 	fi
 }
 
