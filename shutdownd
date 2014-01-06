@@ -59,6 +59,8 @@ USER_TIME=0
 
 while :
 do
+	do_shutdown_count=0
+	do_shutdown_require=0
 	DSLEEP=$SLEEP
 
 	NOW=$(date +%s)
@@ -66,6 +68,7 @@ do
 	## shutdown based on online computers in ${IPRANGE} network
 
 	if [ -n "${IPRANGE}" ]; then
+		do_shutdown_require=$[$do_shutdown_require+1]
 		NET_ON_PCS_tmp=`nmap -sP ${IPRANGE} | grep " up " -B 1 | grep scan | awk '{print $5}' | sort`
 		NET_ON=`echo "${NET_ON_PCS_tmp}" | wc -w`
 		DOMAIN=`hostname -d`
@@ -103,7 +106,7 @@ do
 			NET_TIME=$(date +%s)
 		fi
 		if [ ${NET_ON} -eq 0 ] && [ $[$NOW-$NET_TIME] -ge $NET_IDLE ]; then
-			do_shutdown
+			do_shutdown_count=$[$do_shutdown_count+1]
 			NET_TIME=0
 		fi
 		TSLEEP=$[$NET_IDLE-$NOW+$NET_TIME]
@@ -115,6 +118,7 @@ do
 	## shutdown based on logged in users
 
 	if [ -n "${USER_IDLE}" ]; then
+		do_shutdown_require=$[$do_shutdown_require+1]
 		USERS=$(users | wc -w)
 		if ! [ ${USERS} -eq 0 ]; then
 			USER_TIME=0
@@ -122,7 +126,7 @@ do
 			USER_TIME=$(date +%s)
 		fi
 		if [ ${USERS} -eq 0 ] && [ $[$NOW-$USER_TIME] -ge $USER_IDLE ]; then
-			do_shutdown
+			do_shutdown_count=$[$do_shutdown_count+1]
 			USER_TIME=0
 		fi
 		TSLEEP=$[$USER_IDLE-$NOW+$USER_TIME]
@@ -134,6 +138,7 @@ do
 	## shutdown based on time specified in ${FILE}
 
 	if [ -n "${FILE}" ]; then
+		do_shutdown_require=$[$do_shutdown_require+1]
 		SHUTDOWN=$(cat $FILE)
 		if [ -z "$SHUTDOWN" ]; then
 			SHUTDOWN=0
@@ -141,13 +146,18 @@ do
 		OFFSET=$[$NOW-$SHUTDOWN]
 
 		if [ $OFFSET -le 10 ] && [ $OFFSET -ge 0 ]; then
-			do_shutdown
+			do_shutdown_count=$[$do_shutdown_count+1]
 		fi
 		TSLEEP=10
 		CHECK_FILE=$FILE
 		if [ $TSLEEP -lt $SLEEP ] && [ $TSLEEP -gt 0 ]; then
 			DSLEEP=$TSLEEP
 		fi
+	fi
+
+	## perform shutdown
+	if [ $do_shutdown_count -eq $do_shutdown_require ]; then
+		do_shutdown
 	fi
 
 	## sleep
