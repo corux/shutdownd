@@ -120,6 +120,17 @@ do
 	if [ -n "${USER_IDLE}" ]; then
 		do_shutdown_require=$[$do_shutdown_require+1]
 		USERS=$(users | wc -w)
+		USERS_LIST_tmp=$(users)
+		if [ "${USERS_LIST}" != "${USERS_LIST_tmp}" ]; then
+			log_tmp="${USERS} users logged in: ${USERS_LIST_tmp}"
+			if [ -n "$LOGFILE" ]; then
+				echo "[`date -R`] ${log_tmp}" >> "$LOGFILE"
+			else
+				logger "${log_tmp}"
+			fi
+		fi
+		USERS_LIST=${USERS_LIST_tmp}
+
 		if ! [ ${USERS} -eq 0 ]; then
 			USER_TIME=0
 		elif [ ${USERS} -eq 0 ] && [ ${USER_TIME} -eq 0 ]; then
