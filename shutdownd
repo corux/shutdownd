@@ -107,7 +107,6 @@ do
 		fi
 		if [ ${NET_ON} -eq 0 ] && [ $[$NOW-$NET_TIME] -ge $NET_IDLE ]; then
 			do_shutdown_count=$[$do_shutdown_count+1]
-			NET_TIME=0
 		fi
 		TSLEEP=$[$NET_IDLE-$NOW+$NET_TIME]
 		if [ $TSLEEP -lt $SLEEP ] && [ $TSLEEP -gt 0 ]; then
@@ -131,14 +130,13 @@ do
 		fi
 		USERS_LIST=${USERS_LIST_tmp}
 
-		if ! [ ${USERS} -eq 0 ]; then
+		if [ ${USERS} -ne 0 ]; then
 			USER_TIME=0
 		elif [ ${USERS} -eq 0 ] && [ ${USER_TIME} -eq 0 ]; then
 			USER_TIME=$(date +%s)
 		fi
 		if [ ${USERS} -eq 0 ] && [ $[$NOW-$USER_TIME] -ge $USER_IDLE ]; then
 			do_shutdown_count=$[$do_shutdown_count+1]
-			USER_TIME=0
 		fi
 		TSLEEP=$[$USER_IDLE-$NOW+$USER_TIME]
 		if [ $TSLEEP -lt $SLEEP ] && [ $TSLEEP -gt 0 ]; then
@@ -168,6 +166,8 @@ do
 
 	## perform shutdown
 	if [ $do_shutdown_count -eq $do_shutdown_require ]; then
+		NET_TIME=0
+		USER_TIME=0
 		do_shutdown
 	fi
 
